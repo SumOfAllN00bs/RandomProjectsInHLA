@@ -1,0 +1,201 @@
+Hello,
+
+"HLA Adventure" (as I call it) has been updated to version 3.40. 
+Here are the websites where you may obtain the game (w/ source):
+
+http://members.tripod.com/~panks/hlaadv.html
+
+and
+
+http://www.geocities.com/dunric/westfront.html
+
+Written in Randall Hyde's HLA (High Level Assembly) language, this
+adventure game utilizes my previous "Westfront PC: The Trials of
+Guilder" gaming engine for room descriptions, inventory items,
+battle sequences, and items/monsters.
+
+My ultimate intention was for others to eventually contribute to 
+this project. That being said, as of May 14, 2003 I am releasing
+"HLA Adventure" (as I call it) into the Public Domain. The source
+code is included for others who wish to add to the game as time
+goes on.
+
+As the game is expanded, quests will be added, additional rooms
+designed and implemented, as well as further items, armor and equip-
+ment as seen fit by the person(s) contributing to the project. The
+current distribution (version 3.40) includes over 249 rooms, 27 items,
+9 quests and 36 monsters.
+
+Future versions (planned) will include:
+
+1. Additional Quests - either similar or dissimilar to those in
+"Westfront PC" and other games.
+
+2. More monsters - probably around 40 or so (added soon)
+
+3. More equipment - this depends on if the need is there
+
+4. More rooms - certainly this will be addressed
+
+Note: Typing "credits" at the game prompt will uncover an easter egg. :)
+
+Sometimes it is possible to trip up the parser by entering in
+verbs it does not recognize. The fault lies with 'str.index', which
+looks for the instance of a word or words no matter their location
+within a string. Thus, it is possible to type "south go" and still
+"go south". I am currently working on a better solution for the
+parser.
+
+Currently, "HLA Adventure" works on Windows 95,98,Me,NT/2000, XP and
+Linux/Red Hat/SuSe/Fedora Core. Using the console libraries introduced
+by Mark de Wever at:
+
+http://groups.yahoo.com/group/aoaprogramming/
+
+Linux users will thus be able to compile "HLA Adventure" on their system
+(after compiling the source files with Randy Hyde's HLA program). It should
+be noted that a compiled version for Linux is already included with this
+archive. The hlaadv.hla source code compiles with the Gas assembler under
+Linux, and FASM/MASM/NASM under Windows (check Randy Hyde's HLA website for
+more details). Information on Randy Hyde's HLA can be found at:
+
+http://webster.cs.ucr.edu/
+
+Enjoy, and send bug fixes, contributions, and comments to: dunric@yahoo.com
+
+Mark de Wever, Frank Kotler and others have also contributed ideas, code,
+code modifications, and additional core program content to "HLA Adventure".
+
+Files included are:
+
+HLAADV.EXE - This is the main program, for Windows. Click on it to play.
+WEST06.ELF - This is the main program, for Linux. Run in "xterm" console.
+HLAADV.HLA - This is the source for HLA Adventure. Use HLA versions above 1.48.
+HLAADV.ASM - This is the partial assembly source for HLA Adventure.
+HLAADV.Z5  - This is an Inform version of HLA Adventure. From version 3.20.
+HLAADV.TXT - This is the file you are now reading.
+
+------------------------
+Installing under Linux
+------------------------
+
+Under Linux, install hlaadvlx.tar.gz using the "tar" and "gzip" utilities.
+They should be readily available under most distros of Linux. If not, find
+them here:
+
+Tar:
+
+http://www.gnu.org/software/tar/tar.html
+
+Gzip:
+
+http://www.gnu.org/software/gzip/gzip.html
+
+Running HLA Adventure under xterm:
+
+The examples given below use "$" to designate the xterm command
+prompt. It may differ on your machine. On mine, it is usually
+a "$" prompt. On others, it may be a "#" prompt. This is common
+with the Bash shell used frequently under Linux. For the purposes
+of this example, I will denote an xterm "command prompt" with
+the "$" character.
+
+First, make sure you are in the /usr/ directory. Next, create
+a directory named "hlaadv" below:
+
+$ mkdir hlaadv
+
+Now that the directory has been created, change to it below:
+
+$ cd /usr/hlaadv
+
+The very next thing you should do is copy "hlaadvlx.tar.gz" from
+where you downloaded it from to the newly created directory. For
+example, I saved my copy of HLA Adventure to my floppy drive:
+
+$ cp /mnt/floppy/hlaadvlx.tar.gz /usr/hlaadv
+
+Next, extract hlaadvlx.tar.gz using gzip first, followed by tar:
+
+$ gzip -d hlaadvlx.tar.gz
+$ tar -xvf hlaadvlx.tar
+
+This should extract West06, the main file, along with
+the source code (West06.hla), and other assembly-realted files 
+(West06.asm, etc.)
+
+To run, type:
+
+$ West06
+
+A console window with HLA Adventure should immediately open. Follow
+the prompts on screen to begin playing. You are also presented with
+a "Plot Introduction" screen, whereby the goals of the game are out-
+lined. Finally, the screen just before play begins asks you if you
+wish to resume a saved game. Enter "y" for yes, or "n" for no,
+followed by pressing the "Enter" key.
+
+If you need help during gameplay, type:
+
+help
+
+at the game prompt.
+
+------------------------
+Installing under Windows
+------------------------
+
+HLA Adventure runs on Windows machines from Windows 95
+on through Windows XP Professional. It does not run on
+Windows 3.11 or below, and it won't work under MS-DOS.
+
+To install HLA Adventure under Windows, use either Winzip
+or another extracting utility (such as ZipCentral) to open
+the archive. Then extract the files to the directory "hlaadv".
+If the directory does not exist, make sure to create it or
+have Winzip or ZipCentral do it for you. 
+
+Next, browse to the "My Computer" icon on your Windows
+desktop and double click it. Browse to the directory in
+which you installed HLA Adventure and double click that, too.
+It should open up, displaying several files, including
+"Hlaadv". This should be an icon of an application window
+(unless your settings are different, in which case it may be
+some other similar type of icon). If you are unsure, right-
+click the file, and select Properties. It should say 
+"Application" under the "Type of File" heading.
+
+Double click on "Hlaadv" to play the adventure. It should open
+in a console window. Following the onscreen prompts as needed.
+Type "help" at the game prompt for commands used during gameplay.
+
+----------
+Misc. Info
+----------
+
+Also, make sure that the console window is set to 80 Width and
+25 Height. In Windows, you can apply this by right-clicking the
+console window and selecting "Properties". Then click on the
+"Layout" tab and make sure that "Screen Buffer Size" is set
+to "80" Height and "25" width.
+
+The game displays an "info bar" at the top of the screen (two lines
+each), and this should stay in place so long as the console window
+doesn't have the Screen Buffer Size beyond 80 by 25. Under "xterm"
+in Linux, it doesn't matter because it should default to 80 x 25
+anyway. :)
+
+------------
+Contact Info
+------------
+
+If you have any questions, please e-mail me at: dunric@yahoo.com
+
+Thanks! =)
+
+Sincerely,
+
+Paul Panks
+dunric@yahoo.com
+ICQ# 12234336
+11/17/2005

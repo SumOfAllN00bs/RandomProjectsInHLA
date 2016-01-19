@@ -1,0 +1,25 @@
+program HelloWorldTest;
+#include("stdin.hhf");
+#include("stdout.hhf");
+#include("excepts.hhf");
+static
+	GoodInteger: boolean;
+	i:			int32;
+
+begin HelloWorldTest;
+stdout.put("HelloWorldTest", nl);
+repeat
+	mov( false, GoodInteger ); // Note: GoodInteger must be a boolean var.
+	try
+		stdout.put( "Enter an integer: " );
+		stdin.get( i );
+		mov( true, GoodInteger );
+		exception( ex.ConversionError );
+		stdout.put( "Illegal numeric value, please re-enter", nl );
+	exception( ex.ValueOutOfRange );
+		stdout.put( "Value is out of range, please re-enter", nl );
+	endtry;
+until( GoodInteger );
+stdout.put( i );
+
+end HelloWorldTest;

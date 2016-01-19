@@ -1,0 +1,41 @@
+program nameswap;
+
+#include("stdlib.hhf");
+#include("excepts.hhf");
+
+static
+	theName:	string;
+	nameGiven:	boolean:= 	false;
+
+begin nameswap;
+
+	stralloc(100);
+	mov(eax, theName);
+	repeat
+		stdout.put("Please insert your name:", nl);
+		stdin.flushInput();
+		try
+			stdin.gets(theName);
+			mov((type str.strRec theName).length, eax);
+			breakif(eax = 0);
+			mov(true, nameGiven);
+		exception(ex.StringOverflow);
+			stdout.put("Oops too much to handle.");
+		endtry;
+	until(nameGiven);
+	stdout.put("One day an ugly goblin was born", nl);
+	stdout.put("and your name was ",theName,".", nl);
+	stdout.put("And boy were you ugly.", nl);
+	stdout.put("Unless you're a girl.", nl);
+	stdout.put("Then girl you were ugly.", nl);
+	stdout.put("'Cause how am I suppose to know", nl);
+	stdout.put("your gender with a face like that", nl);
+	stdout.put("Either way, One day", nl);
+	stdout.put("A Goblin named ",theName, " was born", nl);
+	stdout.put("And instantly the story was over.", nl);
+	stdout.put("The End.", nl);
+	stdout.put("Yup thats what you get when you look like you", nl);
+	stdout.put("So thanks for that, ",theName, " stories over go home.", nl);
+	strfree(theName);
+	
+end nameswap;
