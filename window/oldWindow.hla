@@ -1,0 +1,230 @@
+//	based off of hide template
+program Window;
+#includeonce("w.hhf")
+
+type
+	// Message and dispatch table related definitions:
+		  
+	MsgProc_t:	procedure( hwnd:dword; wParam:dword; lParam:dword );
+	
+	MsgProcPtr_t:
+		record
+			MessageValue	:dword;
+			MessageHndlr	:MsgProc_t;			
+		endrecord;
+endtype;
+
+
+static
+	align(4);
+	hinst			:dword;			// instance handle
+	hwnd			:dword;			// main window handle
+	
+	wc		:w.WNDCLASSEX;	// window class structure
+	msg		:w.MSG;			// message record
+endstatic;
+
+
+readonly	// message tables.  change this section to static if you wish to change pointers during run-time
+
+
+	ClassName	:string:="MAINCLASS";		// you may substitude your own name for "MAINCLASS"
+	AppName		:string:="HLA_Window by the N00b";			// you may substitude your own name for "TEMPAPP"
+	
+
+	// main window message table
+	
+	message_table	:MsgProcPtr_t; @nostorage;
+		MsgProcPtr_t	
+			MsgProcPtr_t:[ w.WM_COMMAND,	&Msg_Command	],
+			MsgProcPtr_t:[ w.WM_DESTROY,	&Msg_Destroy	],
+			MsgProcPtr_t:[ w.WM_CLOSE,		&Msg_Close		],
+			MsgProcPtr_t:[ w.WM_CREATE,		&Msg_Create		],
+			// add more messages here
+			MsgProcPtr_t:[ 0, NULL ];	// This marks the end of the list.
+
+	// WM_COMMAND message table, wparam items go here
+	command_table	:MsgProcPtr_t; @nostorage;
+		MsgProcPtr_t
+			// add more commands here
+			MsgProcPtr_t:[ 0,				NULL			];
+		
+endreadonly;
+ 
+procedure Error ( error_msg:string );	@nodisplay;
+begin Error;
+
+	w.MessageBox(NULL,error_msg,"ERROR",w.MB_OK | w.MB_ICONERROR );
+	
+	cmp(hwnd,0);
+	je _nowindow;
+	w.PostQuitMessage(0);
+	exit Error;
+	
+_nowindow:
+	xor(eax,eax);
+
+end Error;
+
+
+procedure Msg_Create ( hwin:dword; wparam:dword; lparam:dword );
+@nodisplay;
+begin Msg_Create;
+
+	mov( hwin, eax);
+	mov( eax, hwnd );
+	// window creation initialization goes here
+	
+end Msg_Create;
+
+	 
+procedure Msg_Close ( hwin:dword; wparam:dword; lparam:dword );
+@nodisplay;
+begin Msg_Close;
+
+	 	// user selects close button
+	 	w.SendMessage(hwin, w.WM_DESTROY, 0, 0 );
+
+end Msg_Close;
+
+
+procedure Msg_Destroy ( hwin:dword; wparam:dword; lparam:dword );
+@nodisplay;
+begin Msg_Destroy;
+
+	 	w.PostQuitMessage( NULL );
+	 
+end Msg_Destroy;
+
+
+procedure Msg_Command ( hwin:dword; wparam:dword; lparam:dword );
+@nodisplay;
+begin Msg_Command;
+
+	mov(wparam,ecx);
+	mov(ecx,edx);
+	movzx(cx,ecx);
+	shr(16,edx);
+	
+	IF ( edx = w.BN_CLICKED || edx = 1 ) THEN
+	
+		// control or accelerator
+
+		mov(&command_table,edx);
+		mov(ecx, eax );
+		
+		FOREVER
+			mov( (type MsgProcPtr_t [edx]).MessageHndlr, ecx );
+			IF ( ecx = 0 ) THEN
+				BREAK;
+				
+			ELSEIF ( eax = (type MsgProcPtr_t [edx]).MessageValue ) THEN
+	
+				push( hwin );
+				push( wparam );
+				push( lparam );
+				call( ecx );
+				sub(eax,eax);
+				BREAK;
+			ENDIF;
+			add( @size( MsgProcPtr_t ), edx );
+		ENDFOR;
+		
+	ENDIF;
+
+end Msg_Command;
+
+
+procedure WndProc ( lparam:dword; wparam:dword; umsg:uns32; hwin:dword );	@nodisplay;
+// main window message handler
+
+begin WndProc;
+
+	mov(umsg,eax);
+	mov(&message_table,edx);
+	
+	FOREVER
+		mov( (type MsgProcPtr_t [edx]).MessageHndlr, ecx );
+		IF( ecx = 0 ) THEN
+			w.DefWindowProc( hwin, umsg, wparam, lparam );
+			EXIT WndProc;
+		ELSEIF( eax = (type MsgProcPtr_t [edx]).MessageValue ) THEN
+
+			push( hwin );
+			push( wparam );
+			push( lparam );
+			call( ecx );
+			sub(eax,eax);
+			BREAK;
+		ENDIF;
+		add( @size( MsgProcPtr_t ), edx );
+	ENDFOR;
+
+end WndProc;
+
+
+begin Window;
+
+	w.GetModuleHandle( NULL );
+	mov( eax, hinst );
+	
+	// main window created here
+	// describe and register the window class
+	mov( @size(w.WNDCLASSEX), wc.cbSize );
+	mov( w.CS_HREDRAW | w.CS_VREDRAW, wc.style );
+	mov( &WndProc, wc.lpfnWndProc );
+	mov( NULL, wc.cbClsExtra );
+	mov( NULL, wc.cbWndExtra );
+	mov( hinst, wc.hInstance );
+	mov( w.COLOR_BTNFACE+1, wc.hbrBackground );
+	mov( NULL, wc.lpszMenuName );
+	mov( ClassName, wc.lpszClassName );
+	
+	w.LoadIcon( NULL, val w.IDI_APPLICATION );
+	mov( eax, wc.hIcon );
+	mov( eax, wc.hIconSm );
+	w.LoadCursor( NULL, val w.IDC_ARROW );
+	mov( eax,wc.hCursor );
+	w.RegisterClassEx( wc );
+	or(eax,eax);
+	jnz _registerok;
+	Error( "Unable to register window class");
+	exit Window;
+	
+_registerok:
+	w.CreateWindowEx(
+			NULL,					// dwExStyle
+			ClassName,				// lpClassName
+			AppName,				// lpWindowName
+			w.WS_OVERLAPPEDWINDOW,	// dwStyle
+			w.CW_USEDEFAULT,		// x
+			w.CW_USEDEFAULT,		// y
+			w.CW_USEDEFAULT,		// nWidth
+			w.CW_USEDEFAULT,		// nHeight
+			NULL,					// hWndParent
+			NULL,					// hMenu
+			hinst,					// hInstance
+			NULL );					// lpParam
+			
+	cmp(eax,0);
+	jne _windowok;
+	Error( "Unable to create window");
+	exit Window;
+	
+_windowok:
+	
+	w.ShowWindow( hwnd, w.SW_SHOWNORMAL );
+	w.UpdateWindow( hwnd );
+
+	FOREVER
+			w.GetMessage(msg,NULL,0,0);
+			breakif( ! eax );
+			
+			w.TranslateMessage( msg );
+			w.DispatchMessage( msg );	
+	ENDFOR;
+	
+	mov( msg.wParam, eax );
+_exit:
+
+end Window;
