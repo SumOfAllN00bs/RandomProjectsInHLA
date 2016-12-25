@@ -1,43 +1,82 @@
 //based off of hide template
 program Window;
+#if(@defined(debug))
+#includeonce("stdlib.hhf")
+#endif
 #includeonce("w.hhf")
+#includeonce("excepts.hhf")
 
 type
 	//Message and dispatch table related definitions:
-	MsgProc_t:	procedure(hwnd:dword; wParam:dword; lParam:dword);
+	MsgProc_t:					procedure(hwnd:dword; wParam:dword; lParam:dword);
 	
 	MsgProcPtr_t:
 		record
-			MessageValue	:dword;
-			MessageHndlr	:MsgProc_t;
+			MessageValue		:dword;
+			MessageHndlr		:MsgProc_t;
+		endrecord;
+		
+	engineStates: 
+		enum{
+			e_Off,			//0
+			e_Game,			//1
+			e_GameEditor,	//2
+			e_UIEditor,		//3
+			e_Loading,		//4
+			e_Closing,		//5
+			e_Opening,		//6
+			e_LoadingSave	//7
+		};
+	//Engine logic handler
+	EngineLogicProcedure_t:		procedure;
+	
+	LogicProcPtr_t:
+		record
+			LogicState			:engineStates;
+			LogicHandler		:EngineLogicProcedure_t;
 		endrecord;
 endtype;
 
 
 static
 	align(4);
-	hinst			:dword;			//instance handle
-	hwnd			:dword;			//main window handle
+	hinst			:dword;						//instance handle
+	hwnd			:dword;						//main window handle
 	
-	wc		:w.WNDCLASSEX;	//window class structure
-	msg		:w.MSG;			//message record
+	wc				:w.WNDCLASSEX;				//window class structure
+	msg				:w.MSG;						//message record
+	
+	Accelerators_A	:w.ACCEL[3];				//An Array of ACCEL structures
+	haccel			:dword;						//the handle to the Accelerator Table
+	
+	engineHandler	:LogicProcPtr_t; @nostorage;
+		LogicProcPtr_t
+ 			LogicProcPtr_t:[e_Off,			&Logic_Off],
+			LogicProcPtr_t:[e_Game, 		&Logic_Game],
+			LogicProcPtr_t:[e_GameEditor, 	&Logic_GameEditor],
+			LogicProcPtr_t:[e_UIEditor, 	&Logic_UIEditor],
+			LogicProcPtr_t:[e_Loading, 		&Logic_Loading],
+			LogicProcPtr_t:[e_Closing, 		&Logic_Closing],
+			LogicProcPtr_t:[e_Opening, 		&Logic_Opening],
+			LogicProcPtr_t:[e_LoadingSave, 	&Logic_LoadingSave];
+	
+	currentState	:LogicProcPtr_t;
 endstatic;
 
 
 readonly	//message tables. change this section to static if you wish to change pointers during run-time
 
-	ClassName	:string:="MAINCLASS";		//you may substitude your own name for "MAINCLASS"
-	AppName		:string:="HLA_Window by the N00b";			//you may substitude your own name for "TEMPAPP"
+	ClassName			:string:="MAINCLASS";		//you may substitude your own name for "MAINCLASS"
+	AppName				:string:="HLA_Window by the N00b";			//you may substitude your own name for "TEMPAPP"
 	
-
 	//main window message table
 	//used to associate windows messages with the handler functions for them
 	message_table	:MsgProcPtr_t; @nostorage;
 		MsgProcPtr_t	
-			MsgProcPtr_t:[ w.WM_COMMAND, 	&Msg_Command	], 
-			MsgProcPtr_t:[ w.WM_DESTROY, 	&Msg_Destroy	], 
-			MsgProcPtr_t:[ w.WM_CLOSE, 		&Msg_Close		], 
-			MsgProcPtr_t:[ w.WM_CREATE, 		&Msg_Create		], 
+			MsgProcPtr_t:[w.WM_COMMAND,		&Msg_Command], 
+			MsgProcPtr_t:[w.WM_DESTROY,		&Msg_Destroy], 
+			MsgProcPtr_t:[w.WM_CLOSE,		&Msg_Close], 
+			MsgProcPtr_t:[w.WM_CREATE,		&Msg_Create],
 			//add more messages here
 			MsgProcPtr_t:[ 0, NULL ];	//This marks the end of the list.
 
@@ -45,6 +84,9 @@ readonly	//message tables. change this section to static if you wish to change p
 	command_table	:MsgProcPtr_t; @nostorage;
 		MsgProcPtr_t
 			//add more commands here
+			MsgProcPtr_t:[1,				&Logic_Game], 		//Ctrl+g
+			MsgProcPtr_t:[2,				&Logic_GameEditor],	//Ctrl+e
+			MsgProcPtr_t:[3,				&Logic_UIEditor],	//Ctrl+u
 			MsgProcPtr_t:[ 0, 				NULL			];
 		
 endreadonly;
@@ -63,6 +105,34 @@ _nowindow:
 
 end Error;
 
+procedure Change_GameState(e_state:engineStates);
+@nodisplay;
+begin Change_GameState;
+	push(eax);
+	push(ebx);
+	push(edx);
+	xor(ebx,ebx);
+	xor(eax,eax);
+	
+	//handle Offset
+	mov(e_state, al);
+	mul(@size(LogicProcPtr_t), ax);
+	mov(&engineHandler, edx);
+	add(eax, edx); //edx contains correct offset address
+	
+	//handle LogicState
+	mov((type uns32 (type LogicProcPtr_t [edx]).LogicState), ebx);
+	mov(bl, currentState.LogicState);
+	
+	//handle LogicHandler
+	mov((type LogicProcPtr_t [edx]).LogicHandler, ebx);
+	mov(ebx, currentState.LogicHandler);
+	
+	pop(edx);
+	pop(ebx);
+	pop(eax);
+end Change_GameState;
+
 
 procedure Msg_Create(hwin:dword; wparam:dword; lparam:dword);
 @nodisplay;
@@ -70,7 +140,58 @@ begin Msg_Create;
 
 	mov(hwin, eax);
 	mov(eax, hwnd);
+	push(esi);
+	
 	//window creation initialization goes here
+	
+	//gameAccel Accelerator Ctrl+Shift+F1 [$8 | $4, $70, 1]
+	mov($8, al);
+	mov(al, Accelerators_A.fVirt);
+	mov((type word 'g'), ax);
+	mov(ax, Accelerators_A.key);
+	mov(1, ax);
+	mov(ax, Accelerators_A.cmd);
+	#if(@defined(debug))
+	stdout.put( "Accelerators_A[0].fVirt = ", Accelerators_A.fVirt, nl );
+	stdout.put( "Accelerators_A[0].key = ", Accelerators_A.key, nl );
+	stdout.put( "Accelerators_A[0].cmd = ", Accelerators_A.cmd, nl );
+	#endif
+	
+	//gameEditorAccel Accelerator Ctrl+Shift+F2 [$8 | $4, $71, 2]
+	mov($8, al);
+	lea(ebx, Accelerators_A);
+	mov(1, esi);
+	intmul(5, esi);
+	mov(al, [ebx+esi]); //fVirt
+	mov((type word 'e'), ax);
+	mov(ax, [ebx+esi+1]); //key is 1 byte into Accelerators_A
+	mov(1, ax);
+	mov(ax, [ebx+esi+3]); //cmd is 3 bytes into Accelerators_A
+	
+	//UIEditorAccel Accelerator Ctrl+Shift+F3 [$8 | $4, $72, 3]
+	mov($8, al);
+	mov(2, esi);
+	intmul(5, esi);
+	mov(al, [ebx+esi]);
+	mov((type word 'u'), ax);
+	mov(ax, [ebx+esi+1]); //key is 1 byte into Accelerators_A
+	mov(1, ax);
+	mov(ax, [ebx+esi+3]); //cmd is 3 bytes into Accelerators_A
+	
+	//CreateAcceleraterTable here
+// 	try
+	w.CreateAcceleratorTable(Accelerators_A, 3);
+	mov(eax, haccel);
+// 	exception(ex.ValueOutOfRange);
+// 	exception(ex.ConversionError);
+// 	endtry;
+	
+	#if(@defined(debug))
+	stdout.put( "haccel = ", haccel, nl );
+
+	#endif
+	
+	pop(esi);
 end Msg_Create;
 
 	 
@@ -89,6 +210,11 @@ begin Msg_Destroy;
 	 	w.PostQuitMessage(NULL);
 end Msg_Destroy;
 
+procedure Msg_KeyDown(hwin:dword; wparam:dword; lparam:dword);
+@nodisplay;
+begin Msg_KeyDown;
+end Msg_KeyDown;
+
 
 procedure Msg_Command(hwin:dword; wparam:dword; lparam:dword);
 @nodisplay;
@@ -100,11 +226,18 @@ begin Msg_Command;
 	mov(ecx, edx);
 	movzx(cx, ecx);
 	shr(16, edx);
+	mov(edx, ebx);
 	
 	if(edx = w.BN_CLICKED || edx = 1) then
 		//control or accelerator
 		mov(&command_table, edx);
 		mov(ecx, eax);
+		#if(@defined(debug))
+		stdout.put( "wparam = ", wparam, nl );
+		stdout.put( "lparam = ", lparam, nl );
+		stdout.put( "Low word = ", ecx, nl );
+		stdout.put( "Hi word = ", ebx, nl );
+		#endif
 		
 		forever
 			mov((type MsgProcPtr_t [edx]).MessageHndlr, ecx);
@@ -126,6 +259,50 @@ begin Msg_Command;
 	endif;
 
 end Msg_Command;
+
+
+procedure Logic_Off; @nodisplay; @noframe;
+begin Logic_Off;
+ret;
+end Logic_Off;
+
+
+procedure Logic_Game; @nodisplay;
+begin Logic_Game;
+w.MessageBox(NULL, "In Game", "Game", w.MB_OK);
+end Logic_Game;
+
+
+procedure Logic_GameEditor; @nodisplay;
+begin Logic_GameEditor;
+w.MessageBox(NULL, "In Game Editor", "GameEditor", w.MB_OK);
+end Logic_GameEditor;
+
+
+procedure Logic_UIEditor; @nodisplay;
+begin Logic_UIEditor;
+w.MessageBox(NULL, "In UI Editor", "UIEditor", w.MB_OK);
+end Logic_UIEditor;
+
+
+procedure Logic_Loading; @nodisplay;
+begin Logic_Loading;
+end Logic_Loading;
+
+
+procedure Logic_Closing; @nodisplay;
+begin Logic_Closing;
+end Logic_Closing;
+
+
+procedure Logic_Opening; @nodisplay;
+begin Logic_Opening;
+end Logic_Opening;
+
+
+procedure Logic_LoadingSave; @nodisplay;
+begin Logic_LoadingSave;
+end Logic_LoadingSave;
 
 
 procedure WndProc(lparam:dword; wparam:dword; umsg:uns32; hwin:dword);	@nodisplay;
@@ -206,9 +383,10 @@ _windowok:
 	forever
 			w.GetMessage(msg, NULL, 0, 0);
 			breakif(!eax);
-			
-			w.TranslateMessage(msg);
-			w.DispatchMessage(msg);	
+			if(!w.TranslateAccelerator(hwnd, haccel, msg)) then
+				w.TranslateMessage(msg);
+				w.DispatchMessage(msg);
+			endif;
 	endfor;
 	mov(msg.wParam, eax);
 _exit:
